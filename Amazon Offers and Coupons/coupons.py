@@ -37,23 +37,21 @@ def getdeals(soup):
         image_url= item.find('img',{'class': 'a-dynamic-image coupon-image'})['src']
         
         try:
-            coupon=item.find('span', {'class': 'a-size-medium a-color-success a-text-bold'}).text.replace('Save', '').strip()
-            coupon_mode=item.find('div',{'class':"c-coupon"})
-        except:
-            coupon="Missing"
+            coupon=item.find('span', {'class': 'a-size-medium a-color-success a-text-bold'}).text.replace('Save','').strip()
             coupon_mode="Applied Automatically on Checkout"
+        except:
+            coupon="Missing"            
         print(title, refined_link, image_url, coupon, coupon_mode)
         
 
         parameters = {
             "chat_id": "-743974581", #specific chat id
             "photo": image_url, #image to send
-            "caption": title+"\n"+refined_link+"\nCoupon:"+coupon+"%\nCoupon Code: "+coupon_mode
+            "caption": title+"\n"+refined_link+"\nCoupon:"+coupon+"\nCoupon Code: "+coupon_mode
         }
         resp=requests.get(telegram_url, data=parameters)
         print("Notification sent to telegram")
-
-        sleep_time = random.randint(60, 120)        
+        sleep_time = random.randint(60, 120) 
         time.sleep(sleep_time)
         pass
         
@@ -67,6 +65,6 @@ while True:
         getdeals(soup)
     except:
         pass
-    sleep_time = random.randint(60, 120)        
+    sleep_time = random.randint(10, 20)        
     time.sleep(sleep_time)
 
