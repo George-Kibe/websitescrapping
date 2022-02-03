@@ -7,7 +7,7 @@ import time
 s = HTMLSession()
 
 offer_and_coupon_items =["laptops","coupons","offers","monitors","iphones", "cabinets","Arts & Crafts","Automotive",
-"Baby","Beauty & Personal Care","Books","Boy's Fashion","Digital Music","Computers","Tools & Home Improvement",
+"Baby","Beauty & Personal Care","Books","Digital Music","Computers","Tools & Home Improvement",
 "Deals","Industrial & Scientific","Kindle Store","Luggage","Men's Fashion", "Music, CDs & Vinyl",
 "Pet Supplies","Software","Sports & Outdoors","Video Games","Women's Fashion","All Departments"]
 
@@ -30,7 +30,6 @@ def getdeals(soup):
     offer_or_coupon_items = soup.find_all('div', {'data-component-type': 's-search-result'})
     for item in offer_or_coupon_items:
         title = item.find('span', {'class': 'a-size-medium a-color-base a-text-normal'}).text.strip()
-        short_title = item.find('span', {'class': 'a-size-medium a-color-base a-text-normal'}).text.strip()[:50]
         link = item.find('a', {'class': 'a-link-normal s-underline-text s-underline-link-text s-link-style a-text-normal'})['href']
         refined_link= "https://www.amazon.com"+link
         image_url= item.find('img',{'class': 's-image'})['src']
@@ -39,8 +38,7 @@ def getdeals(soup):
             oldprice = float(item.find_all('span', {'class': 'a-offscreen'})[1].text.replace('$','').replace(',','').strip())
         except:
             saleprice="Missing"
-            oldprice="Missing"
-            #oldprice = float(item.find('span', {'class': 'a-offscreen'}).text.replace('$','').replace(',','').strip())
+            oldprice="Missing"            
         try:
             reviews = item.find('span', {'class', 'a-size-base'}).text.strip()
         except:
@@ -53,8 +51,9 @@ def getdeals(soup):
             "caption": title+"\n"+refined_link+"\nPreviously being sold at $"+str(oldprice)+"\nCurrently being sold at $"+str(saleprice),
         }
         resp=requests.get(telegram_url, data=parameters)
-        sleep_time = random.randint(600, 1200)
-        
+        print("Notification sent to telegram")
+
+        sleep_time = random.randint(600, 1200)        
         time.sleep(sleep_time)
 
 
@@ -69,8 +68,7 @@ def getnextpage(soup):
 
 while True:
     url=get_offer_url(offer_and_coupon_items)
-    soup = getdata(url)
-    getdeals(soup)
+    soup = getdata(url)    
     try:
       getdeals(soup)
       url2 = getnextpage(soup)
@@ -79,5 +77,6 @@ while True:
     except:
       pass
     
-    sleep_time = random.randint(600, 1200) 
+    sleep_time = random.randint(10, 20) 
     time.sleep(sleep_time)
+      
