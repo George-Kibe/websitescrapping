@@ -53,7 +53,7 @@ def getdeals(soup):
         resp=requests.get(telegram_url, data=parameters)
         print("Notification sent to telegram")
 
-        sleep_time = random.randint(600, 1200)        
+        sleep_time = random.randint(60, 200)        
         time.sleep(sleep_time)
 
 

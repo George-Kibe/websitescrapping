@@ -17,7 +17,6 @@ def get_offer_url(offer_and_coupon_items):
     offer_and_coupon_item = random.choice(offer_and_coupon_items)
     url=f'https://www.amazon.com/hz/coupons/search?searchText={offer_and_coupon_item}'
     print(offer_and_coupon_item)
-    print(url)
     return url
 
 def getdata(url):
