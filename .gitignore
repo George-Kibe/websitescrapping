@@ -6,4 +6,6 @@ whisky.csv
 whisky.json
 chromedriver_win32
 venv
+venv/
 chromedriver_win32.zip
+tkinter-projects/venv
