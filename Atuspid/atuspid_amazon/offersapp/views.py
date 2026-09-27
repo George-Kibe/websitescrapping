@@ -1,67 +1,51 @@
-from django.shortcuts import render
+import logging
+import threading
+
+from django.conf import settings
 from django.contrib import messages
-import aiohttp
-import asyncio
-from requests_html import AsyncHTMLSession
-from bs4 import BeautifulSoup
-import random
-import requests
-import time
+from django.http import Http404
+from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
 
-s = AsyncHTMLSession()
-telegram_url = "https://api.telegram.org/bot5198206552:AAG6-73A47O0GnzNJcLWkG57OD8ICeV6eGU/sendPhoto"
+from .scraper import JOBS, Browser, TelegramSender
 
-daily_offers_url = "https://www.amazon.com/gp/goldbox"
+log = logging.getLogger(__name__)
 
-
-async def getdata(daily_offers_url):
-    task1 = s.get(daily_offers_url)
-    print("So far so good")
-    r = await task1
-    r.html.render(timeout=20)
-    soup = await BeautifulSoup(r.html.html, 'html.parser')
-    print("Soup generated successfully HTTPResponse 200")
-    return soup
+JOB_LABELS = {
+    "coupons": "Coupons",
+    "daily-deals": "Today's deals",
+    "multiple-deals": "Discounted search results",
+}
 
 
-async def getdeals(soup):
-    task = asyncio.create_task(getdata(daily_offers_url))
-    await task
-    daily_deals = await soup.find_all(
-        'div', {'class': 'DealGridItem-module__dealItemContent_1vFddcq1F8pUxM8dd9FW32'})
-    for item in daily_deals:
-        title = item.find('div', {
-                          'class': 'DealContent-module__truncate_sWbxETx42ZPStTc9jwySW'}).text.strip()
-        refined_link = item.find(
-            'a', {'class': 'a-link-normal a-color-base a-text-normal'})['href']
-        image_url = item.find('img')['src']
-        try:
-            saleprice = float(
-                item.find('span', {'class': 'a-price-whole'}).text.strip())
-            offer_details = item.find(
-                'span', {'class': 'a-size-small a-color-secondary'}).text.strip()
-        except:
-            saleprice = "Missing"
-            offer_details = "Offer Expired"
-
-        #print(title, refined_link, image_url, saleprice, offer_details)
-
-        parameters = {
-            "chat_id": "-1001715128710",  # specific chat id
-            "photo": image_url,  # image to send
-            "caption": title+"\n"+refined_link+"\nType: DEAL OF THE DAY\nOffer Details:"+offer_details+"\nPrice:"+str(saleprice),
-        }
-        resp = requests.get(telegram_url, data=parameters)
-        print("Telegram notification sent")
-
-        sleep_time = random.randint(5, 100)
-        time.sleep(sleep_time)
+def home(request):
+    return render(request, "offersapp/home.html", {"jobs": JOB_LABELS})
 
 
-async def home(request):
-    if request.method == "POST":
-        soup = await getdata(daily_offers_url)
-        asyncio.run(getdeals(soup))
-        #messages.success(request, "Daily offers found, Sending to Telegram")
-        # getdeals(soup)
-    return render(request, 'offersapp/home.html')
+def _run_job(job_name: str) -> None:
+    """Run one scraping job; executed on a background thread."""
+    sender = TelegramSender(settings.TELEGRAM_BOT_TOKEN, settings.TELEGRAM_CHAT_ID)
+    try:
+        with Browser() as browser:
+            JOBS[job_name](browser, sender)
+    except Exception:
+        log.exception("Job %s failed", job_name)
+
+
+def start_job(job_name: str) -> None:
+    # Scraping and posting take minutes (the sender pauses between messages),
+    # so run it off the request thread and respond straight away.
+    threading.Thread(target=_run_job, args=(job_name,), name=f"job-{job_name}", daemon=True).start()
+
+
+@require_POST
+def run_job(request, job_name):
+    if job_name not in JOBS:
+        raise Http404("Unknown job")
+    if not (settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_CHAT_ID):
+        messages.error(request, "Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID before running jobs.")
+        return redirect("home")
+
+    start_job(job_name)
+    messages.success(request, f"{JOB_LABELS[job_name]}: checking Amazon and sending results to Telegram.")
+    return redirect("home")

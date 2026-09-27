@@ -1,35 +1,47 @@
-# pip install selenium
-# download chromedriver from https://sites.google.com/chromium.org/driver/
+"""
+Search a site and print the matching article summaries.
 
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
+Usage:
+    python selenium_bot.py                 # searches techwithtim.net for "test"
+    python selenium_bot.py python --headless
+"""
+
+import argparse
+
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
-import time
+from selenium.webdriver.support.ui import WebDriverWait
 
-PATH = "E:\IDLE\Webscrapping\selenium\chromedriver_win32\chromedriver.exe"
-driver = webdriver.Chrome(PATH)
+from browser import make_driver
 
-url = "https://techwithtim.net"
-url2 = "https://www.ticketmaster.com/"
-driver.get(url)
+URL = "https://techwithtim.net"
 
-# close a tab and close the whole browser
-#driver.close() and driver.quit()
-# driver title print(driver.title)
-# page source print(driver.page_source)
-search = driver.find_element_by_name("s")  # searchbox
-search.send_keys("test")  # search name
-search.send_keys(Keys.RETURN)  # hit enter
-#main = driver.find_element_by_id("main")
-try:
-    main = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "main")))
-    print(main.text)
-    articles = main.find_elements(by=By.TAG_NAME, value="article")
-    for article in articles:
-        header = article.find_element(by=By.CLASS_NAME, value="entry-summary")
-        print(header)
-finally:
-    driver.quit()
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Search techwithtim.net with Selenium.")
+    parser.add_argument("query", nargs="?", default="test")
+    parser.add_argument("--headless", action="store_true")
+    args = parser.parse_args()
+
+    driver = make_driver(args.headless)
+    try:
+        driver.get(URL)
+        print("Page title:", driver.title)
+
+        search = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.NAME, "s")))
+        search.send_keys(args.query, Keys.RETURN)
+
+        main_area = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "main")))
+        for article in main_area.find_elements(By.TAG_NAME, "article"):
+            summaries = article.find_elements(By.CLASS_NAME, "entry-summary")
+            print("-", (summaries[0] if summaries else article).text.strip()[:200])
+    except TimeoutException:
+        print("The page did not show the expected elements; the site layout may have changed.")
+    finally:
+        driver.quit()
+
+
+if __name__ == "__main__":
+    main()

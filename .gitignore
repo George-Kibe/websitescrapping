@@ -1,11 +1,32 @@
-scrapy/venv
-posts.csv
-housing.csv
-IMDB Movie Ratings.xlsx
-whisky.csv
-whisky.json
-chromedriver_win32
-venv
+# Python
+__pycache__/
+*.py[cod]
+.venv/
 venv/
-chromedriver_win32.zip
-tkinter-projects/venv
+env/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets
+.env
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Scraper / app output
+*.csv
+*.json
+*.xlsx
+*.db
+*.sqlite3
+!**/tests/fixtures/**
+YoutubeDownloader/downloads/
+
+# Scrapy
+.scrapy/
+
+# Legacy manual driver downloads (Selenium Manager handles drivers now)
+chromedriver*

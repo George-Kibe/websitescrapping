@@ -1,41 +1,35 @@
-import aiohttp
+"""
+Download several pages concurrently with aiohttp, outside Django.
+
+Usage:
+    python testaiohttp.py
+"""
+
 import asyncio
+
+import aiohttp
 from bs4 import BeautifulSoup
 
-
-async def get_page(session, url):
-    async with session.get(url) as r:
-        return await r.text()
+URLS = [f"https://books.toscrape.com/catalogue/page-{n}.html" for n in range(1, 5)]
 
 
-async def get_all(session, urls):
-    tasks = []
-    for url in urls:
-        task = asyncio.create_task(get_page(session, url))
-        tasks.append(task)
-    results = await asyncio.gather(*tasks)
-    return results
+async def get_page(session: aiohttp.ClientSession, url: str) -> str:
+    async with session.get(url) as response:
+        response.raise_for_status()
+        return await response.text()
 
 
-async def main(urls):
-    async with aiohttp.ClientSession() as session:
-        data = await get_all(session, urls)
-        return data
+async def get_all(urls: list[str]) -> list[str]:
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
+        return await asyncio.gather(*(get_page(session, url) for url in urls))
 
 
-def parse(results):
-    for html in results:
-        soup = BeautifulSoup(html)
-        print(soup.find('form', {'class': 'form-horizontal'}).text.strip())
-        return
+def main() -> None:
+    for url, html in zip(URLS, asyncio.run(get_all(URLS)), strict=True):
+        soup = BeautifulSoup(html, "lxml")
+        pager = soup.select_one("li.current")
+        print(url, "->", pager.get_text(strip=True) if pager else "no pager found")
 
 
-if __name__ == '__main__':
-    urls = [
-        'https://books.toscrape.com/catalogue/page-1.html',
-        'https://books.toscrape.com/catalogue/page-2.html',
-        'https://books.toscrape.com/catalogue/page-3.html',
-        'https://books.toscrape.com/catalogue/page-4.html'
-    ]
-    results = asyncio.run(main(urls))
-    parse(results)
+if __name__ == "__main__":
+    main()

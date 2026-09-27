@@ -1,36 +1,48 @@
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
+"""
+Click through links and use the browser's back/forward history.
+
+Usage:
+    python selenium_events.py [--headless]
+"""
+
+import argparse
+
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
+from selenium.webdriver.support.ui import WebDriverWait
 
-PATH = "E:\IDLE\Webscrapping\selenium\chromedriver_win32\chromedriver.exe"
-driver = webdriver.Chrome(PATH)
+from browser import make_driver
 
-url = "https://techwithtim.net"
-driver.get(url)
-
-link = driver.find_element_by_link_text("Python Programming")
-link.click()
-
-try:
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.LINK_TEXT, "Beginner Python Tutorials")))
-    element.click()
-    # to clear element.clear() especially if it is a searchfield
-
-    element = WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.ID, "sow-button-19310003")))
-    element.click()
-
-    driver.back()
-    driver.back()
-    driver.back()
-    driver.forward()
-except:
-    driver.quit()
+URL = "https://techwithtim.net"
 
 
-time.sleep(20)
-driver.quit()
+def click_link(driver, text: str, timeout: int = 10) -> None:
+    link = WebDriverWait(driver, timeout).until(EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, text)))
+    link.click()
+    print("Opened:", driver.title)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Selenium navigation demo.")
+    parser.add_argument("--headless", action="store_true")
+    args = parser.parse_args()
+
+    driver = make_driver(args.headless)
+    try:
+        driver.get(URL)
+        click_link(driver, "Python Programming")
+        click_link(driver, "Beginner Python Tutorials")
+
+        driver.back()
+        print("Back to:", driver.title)
+        driver.forward()
+        print("Forward to:", driver.title)
+    except TimeoutException:
+        print("A link was not found in time; the site layout may have changed.")
+    finally:
+        driver.quit()
+
+
+if __name__ == "__main__":
+    main()
