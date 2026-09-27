@@ -13,6 +13,12 @@ Downloads are saved into a local "downloads/" folder, with the video
 title used as the filename. Requires yt-dlp (see requirements.txt) and
 ffmpeg installed on your system (needed to merge separate video/audio
 streams into a single file).
+
+YouTube now requires a JavaScript runtime to solve its download
+challenges; without one, yt-dlp falls back to limited clients whose
+stream URLs fail with "HTTP Error 403: Forbidden". Installing the
+requirements (yt-dlp[default,deno]) provides both the solver scripts
+and a deno runtime. An existing Node.js install also works.
 """
 
 import sys
@@ -35,6 +41,8 @@ def download_video(url: str) -> None:
         "restrictfilenames": True,  # avoid special characters that can break filesystems
         "quiet": False,
         "no_warnings": False,
+        # JavaScript runtimes used to solve YouTube's challenges (first one found is used)
+        "js_runtimes": {"deno": {}, "node": {}},
     }
 
     with YoutubeDL(ydl_opts) as ydl:
